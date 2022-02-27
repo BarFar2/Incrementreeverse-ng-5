@@ -1,82 +1,145 @@
 
 function exponentialFormat(num, precision, mantissa = true) {
-    let e = num.log10().floor()
-    let m = num.div(Decimal.pow(10, e))
-    if (m.toStringWithDecimalPlaces(precision) == 10) {
-        m = decimalOne
-        e = e.add(1)
-    }
-    e = (e.gte(1e9) ? format(e, 3) : (e.gte(10000) ? commaFormat(e, 0) : e.toStringWithDecimalPlaces(0)))
-    if (mantissa)
-        return m.toStringWithDecimalPlaces(precision) + "e" + e
-    else return "e" + e
+  
+    return num.toStringWithDecimalPlaces(precision)
 }
 
 function commaFormat(num, precision) {
     if (num === null || num === undefined) return "NaN"
-    if (num.mag < 0.001) return (0).toFixed(precision)
-    let init = num.toStringWithDecimalPlaces(precision)
+    if (num.array[0] < 0.001) return (0).toFixed(precision)
+    let init = num.toString()
     let portions = init.split(".")
     portions[0] = portions[0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,")
-    if (portions.length == 1) return portions[0]
-    return portions[0] + "." + portions[1]
+    return portions[0]
+
+    
 }
 
+function formatSmall(x, precision=2) { 
+    return format(x, precision, true)    
+}
 
 function regularFormat(num, precision) {
-    if (num === null || num === undefined) return "NaN"
-    if (num.mag < 0.0001) return (0).toFixed(precision)
-    if (num.mag < 0.1 && precision !==0) precision = Math.max(precision, 4)
-    return num.toStringWithDecimalPlaces(precision)
+    if (isNaN(num)) return "NaN"
+    if (num.array[0] < 0.001) return (0).toFixed(precision)
+    return num.toString(Math.max(precision,2))
 }
 
 function fixValue(x, y = 0) {
-    return x || new Decimal(y)
+    return x || new ExpantaNum(y)
 }
 
 function sumValues(x) {
     x = Object.values(x)
-    if (!x[0]) return decimalZero
-    return x.reduce((a, b) => Decimal.add(a, b))
+    if (!x[0]) return new ExpantaNum(0)
+    return x.reduce((a, b) => ExpantaNum.add(a, b))
 }
-
-function format(decimal, precision = 2, small) {
+function egg(n) {
+  if(n == undefined) return 0
+  return n
+}
+function format(decimal, precision = 2, small=false) {
     small = small || modInfo.allowSmall
-    decimal = new Decimal(decimal)
-    if (isNaN(decimal.sign) || isNaN(decimal.layer) || isNaN(decimal.mag)) {
-        player.hasNaN = true;
-        return "NaN"
+    decimal = new ExpantaNum(decimal)
+    let fmt = decimal.toString()
+    if(decimal.eq(0))return "0"
+    if(decimal.lt("0.0001")){return format(decimal.rec(), precision) + "⁻¹"}
+  else if(decimal.lt(1)){
+    if(small)precision+=2
+    if(fmt.length<precision+2){fmt+="0".repeat(precision-fmt.length+2)}
+    else{fmt = fmt.substring(0,precision+2)}
     }
-    if (decimal.sign < 0) return "-" + format(decimal.neg(), precision, small)
-    if (decimal.mag == Number.POSITIVE_INFINITY) return "Infinity"
-    if (decimal.gte("eeee1000")) {
-        var slog = decimal.slog()
-        if (slog.gte(1e6)) return "F" + format(slog.floor())
-        else return Decimal.pow(10, slog.sub(slog.floor())).toStringWithDecimalPlaces(3) + "F" + commaFormat(slog.floor(), 0)
+  else if(decimal.lt(1000)){
+    let f=fmt.split(".")
+    if(precision==0){
+      return format(decimal.floor())}
+    else if(f.length==1){
+      return fmt+".00"
     }
-    else if (decimal.gte("1e1000000")) return exponentialFormat(decimal, 0, false)
-    else if (decimal.gte("1e10000")) return exponentialFormat(decimal, 0)
-    else if (decimal.gte(1e9)) return exponentialFormat(decimal, precision)
-    else if (decimal.gte(1e3)) return commaFormat(decimal, 0)
-    else if (decimal.gte(0.0001) || !small) return regularFormat(decimal, precision)
-    else if (decimal.eq(0)) return (0).toFixed(precision)
-
-    decimal = invertOOM(decimal)
-    let val = ""
-    if (decimal.lt("1e1000")){
-        val = exponentialFormat(decimal, precision)
-        return val.replace(/([^(?:e|F)]*)$/, '-$1')
+    else if(f[1].length<precision){
+      return fmt+"0".repeat(precision-f[1].length)
     }
-    else   
-        return format(decimal, precision) + "⁻¹"
-
-}
+    else{
+      return f[0]+"."+f[1].substring(0,precision)
+    }
+  }else if(decimal.lt(1e9)){
+    return commaFormat(decimal,precision)
+  }else if(decimal.lt("e10000")){
+    let mantissa = EN(10).pow(decimal.log10().sub(decimal.log10().floor()))
+    let exp = decimal.log10().floor()
+    let m = mantissa.toString().split(".")
+    if(m.length==1)mantissa = m[0]+".00"
+    else if(m[1].length<precision){
+      mantissa = m[0]+"."+m[1]+"0".repeat(precision-m[1].length)
+    }
+    else if(precision==0){mantissa = m[0]+"."+m[1].substring(0,2)}
+    else mantissa = m[0]+"."+m[1].substring(0,precision)
+    return mantissa+"e"+exp.toString()
+  }
+  else if(decimal.lt("10^^5")){
+    let part1 = "e".repeat(egg(decimal.array[1])+1 - (decimal.gte(EN.E_MAX_SAFE_INTEGER)))
+    if(part1 != "e" && decimal.gt("e9e15")) {
+      decimal.array.pop()
+      return part1+format(decimal)
+    }
+    return "e"+format(decimal.log10())
+  }
+  else if(decimal.lt("10^^^5")){
+    let part1 = "F".repeat(egg(decimal.array[2])+1 - (decimal.gte(EN.TETRATED_MAX_SAFE_INTEGER)))
+    if(part1 != "F") 
+    {
+      decimal.array.pop()
+      return part1+format(decimal)
+    }
+    return "F"+format(decimal.slog())
+  }
+  else {
+    if(decimal.lt("10^^^^5")){
+      //console.log(egg(decimal.array[3]))
+      // Hmmmmmm
+      let part1 = "G".repeat(egg(decimal.array[3])+ 1 - (decimal.gte("10^^^"+Number.MAX_SAFE_INTEGER)))
+      if(part1 != "G") {
+        decimal.array.pop()
+        return part1+format(decimal)
+      }
+      return "G" + format(decimal.hlog(3))
+    }
+    else if(decimal.lt("10{5}5")){
+      let part1 = "H".repeat(egg(decimal.array[4])+1 - (decimal.gte("10^^^^"+Number.MAX_SAFE_INTEGER)))
+      if(part1 != "H") {
+        decimal.array.pop()
+        return part1+format(decimal)
+      }
+      return "H" + format(decimal.hlog(4))
+    }
+    let e= decimal.toHyperE()
+    let sp = e.split("#")
+    sp[0]="E10"
+    return sp.join("#")/*
+    else{
+      if(decimal.lt("10{998}5")){
+        let qp = EN(6)
+        let op=formatWhole(qp)
+        while(decimal.lt("10{"+op+"}5")){
+          qp=qp.add(1)
+          op=formatWhole(qp)
+        }
+        qp=qp.sub(1)
+        op=formatWhole(qp)
+        let part1 = ("10{"+op+"}").repeat(egg(decimal.array[4])+1 - (decimal.gte("10^^^^"+Number.MAX_SAFE_INTEGER)))
+      if(part1 != ("10{"+op+"}")) {
+        decimal.array.pop()
+        return part1+format(decimal)
+      }
+      return "10{"+op+"}" + format(decimal.hlog(op))
+      }
+    }*/
+       }
+  return fmt
+} // w- what 
 
 function formatWhole(decimal) {
-    decimal = new Decimal(decimal)
-    if (decimal.gte(1e9)) return format(decimal, 2)
-    if (decimal.lte(0.99) && !decimal.eq(0)) return format(decimal, 2)
-    return format(decimal, 0)
+    return format(decimal,0)
 }
 
 function formatTime(s) {
@@ -88,24 +151,10 @@ function formatTime(s) {
 }
 
 function toPlaces(x, precision, maxAccepted) {
-    x = new Decimal(x)
-    let result = x.toStringWithDecimalPlaces(precision)
-    if (new Decimal(result).gte(maxAccepted)) {
-        result = new Decimal(maxAccepted - Math.pow(0.1, precision)).toStringWithDecimalPlaces(precision)
+    x = new ExpantaNum(x)
+    let result = x.toString(precision)
+    if (new ExpantaNum(result).gte(maxAccepted)) {
+        result = new ExpantaNum(maxAccepted - Math.pow(0.1, precision)).toString(precision)
     }
     return result
-}
-
-// Will also display very small numbers
-function formatSmall(x, precision=2) { 
-    return format(x, precision, true)    
-}
-
-function invertOOM(x){
-    let e = x.log10().ceil()
-    let m = x.div(Decimal.pow(10, e))
-    e = e.neg()
-    x = new Decimal(10).pow(e).times(m)
-
-    return x
 }

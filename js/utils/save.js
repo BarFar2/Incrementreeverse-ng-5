@@ -1,10 +1,8 @@
 // ************ Save stuff ************
-function save(force) {
-	NaNcheck(player)
-	if (NaNalert && !force) return
-	localStorage.setItem(modInfo.id, btoa(unescape(encodeURIComponent(JSON.stringify(player)))));
-	localStorage.setItem(modInfo.id+"_options", btoa(unescape(encodeURIComponent(JSON.stringify(options)))));
-
+function save() {
+	localStorage.setItem(modInfo.id, unescape(encodeURIComponent("eydXRvc2F2ZSI6dHJ1ZSwibXNEaXNwbGF5IjoiYWx3YXlzIiwidGhlbWUiOm51bGwsImhxVHJlZSI6ZmFsc2UsIm9mZmxpbmVQcm9kIjp0cnVlLCJoaWRlQ2hhbGxlbmdlcyI6ZmFsc2UsInNob3dTdG9yeSI6dHJ1ZSwiZm9yY2VPbmVUYWIiOmZhbHNlLCJvbGRTdHlsZSI6ZmFsc2V9"+LZString.compressToBase64(JSON.stringify(player)))));
+	localStorage.setItem(modInfo.id+"_options", unescape(encodeURIComponent(btoa(JSON.stringify(options)))));
+  //ok it saved fine so the problem must be when loading
 }
 function startPlayerBase() {
 	return {
@@ -65,19 +63,19 @@ function getStartLayerData(layer) {
 	if (layerdata.unlocked === undefined)
 		layerdata.unlocked = true;
 	if (layerdata.total === undefined)
-		layerdata.total = decimalZero;
+		layerdata.total = new ExpantaNum(0);
 	if (layerdata.best === undefined)
-		layerdata.best = decimalZero;
+		layerdata.best = new ExpantaNum(0);
 	if (layerdata.resetTime === undefined)
 		layerdata.resetTime = 0;
-	if (layerdata.forceTooltip === undefined)
-		layerdata.forceTooltip = false;
+        if (layerdata.forceTooltip === undefined)
+                layerdata.forceTooltip = false;
 
-	layerdata.buyables = getStartBuyables(layer);
-	if (layerdata.noRespecConfirm === undefined) layerdata.noRespecConfirm = false
+        layerdata.buyables = getStartBuyables(layer);
+        if (layerdata.noRespecConfirm === undefined) layerdata.noRespecConfirm = false
 	if (layerdata.clickables == undefined)
 		layerdata.clickables = getStartClickables(layer);
-	layerdata.spentOnBuyables = decimalZero;
+	layerdata.spentOnBuyables = new ExpantaNum(0);
 	layerdata.upgrades = [];
 	layerdata.milestones = [];
 	layerdata.lastMilestone = null;
@@ -85,7 +83,6 @@ function getStartLayerData(layer) {
 	layerdata.challenges = getStartChallenges(layer);
 	layerdata.grid = getStartGrid(layer);
 	layerdata.prevTab = ""
-
 	return layerdata;
 }
 function getStartBuyables(layer) {
@@ -93,7 +90,7 @@ function getStartBuyables(layer) {
 	if (layers[layer].buyables) {
 		for (id in layers[layer].buyables)
 			if (isPlainObject(layers[layer].buyables[id]))
-				data[id] = decimalZero;
+				data[id] = new ExpantaNum(0);
 	}
 	return data;
 }
@@ -115,29 +112,15 @@ function getStartChallenges(layer) {
 	}
 	return data;
 }
-function getStartGrid(layer) {
-	let data = {};
-	if (! layers[layer].grid) return data
-	if (layers[layer].grid.maxRows === undefined) layers[layer].grid.maxRows=layers[layer].grid.rows
-	if (layers[layer].grid.maxCols === undefined) layers[layer].grid.maxCols=layers[layer].grid.cols
-
-	for (let y = 1; y <= layers[layer].grid.maxRows; y++) {
-		for (let x = 1; x <= layers[layer].grid.maxCols; x++) {
-			data[100*y + x] = layers[layer].grid.getStartData(100*y + x)
-		}
-	}
-	return data;
-}
-
 function fixSave() {
 	defaultData = getStartPlayer();
 	fixData(defaultData, player);
 
 	for (layer in layers) {
 		if (player[layer].best !== undefined)
-			player[layer].best = new Decimal(player[layer].best);
+			player[layer].best = new ExpantaNum(player[layer].best);
 		if (player[layer].total !== undefined)
-			player[layer].total = new Decimal(player[layer].total);
+			player[layer].total = new ExpantaNum(player[layer].total);
 
 		if (layers[layer].tabFormat && !Array.isArray(layers[layer].tabFormat)) {
 
@@ -150,6 +133,19 @@ function fixSave() {
 					player.subtabs[layer][item] = Object.keys(layers[layer].microtabs[item])[0];
 		}
 	}
+}
+function getStartGrid(layer) {
+	let data = {};
+	if (! layers[layer].grid) return data
+	if (layers[layer].grid.maxRows === undefined) layers[layer].grid.maxRows=layers[layer].grid.rows
+	if (layers[layer].grid.maxCols === undefined) layers[layer].grid.maxCols=layers[layer].grid.cols
+
+	for (let y = 1; y <= layers[layer].grid.maxRows; y++) {
+		for (let x = 1; x <= layers[layer].grid.maxCols; x++) {
+			data[100*y + x] = layers[layer].grid.getStartData(100*y + x)
+		}
+	}
+	return data;
 }
 function fixData(defaultData, newData) {
 	for (item in defaultData) {
@@ -164,12 +160,17 @@ function fixData(defaultData, newData) {
 			else
 				fixData(defaultData[item], newData[item]);
 		}
-		else if (defaultData[item] instanceof Decimal) { // Convert to Decimal
+		else if (defaultData[item] instanceof ExpantaNum) { // Convert to ExpantaNum
 			if (newData[item] === undefined)
 				newData[item] = defaultData[item];
 
-			else
-				newData[item] = new Decimal(newData[item]);
+			else{
+                let newItemThing=new ExpantaNum(0)
+				newItemThing.array = newData[item].array
+				newItemThing.sign = newData[item].sign
+				newItemThing.layer = newData[item].layer
+                newData[item] = newItemThing
+            } 
 		}
 		else if ((!!defaultData[item]) && (typeof defaultData[item] === "object")) {
 			if (newData[item] === undefined || (typeof defaultData[item] !== "object"))
@@ -186,20 +187,69 @@ function fixData(defaultData, newData) {
 }
 function load() {
 	let get = localStorage.getItem(modInfo.id);
-
 	if (get === null || get === undefined) {
 		player = getStartPlayer();
 		options = getStartOptions();
 	}
 	else {
-		player = Object.assign(getStartPlayer(), JSON.parse(decodeURIComponent(escape(atob(get)))));
+		var a = LZString.decompressFromBase64(get.substr(214));
+		if(a==null){a=atob(get)}
+		else if(a[0]!="{"){a = atob(get)}
+		if(a==null){		
+			player = getStartPlayer();
+			options = getStartOptions();
+			if (player.offlineProd) {
+				if (player.offTime === undefined){
+					player.offTime = { remain: 0 }
+				};
+				player.offTime.remain += (Date.now() - player.time) / 1000;
+			}
+			player.time = Date.now();
+			versionCheck();
+			changeTheme();
+			changeTreeQuality();
+			updateLayers();
+			setupModInfo();
+		
+			setupTemp();
+			updateTemp();
+			updateTemp();
+			updateTabFormats();
+			loadVue();
+			return
+		}
+		if(a[0]!="{"){
+			player = getStartPlayer();
+			options = getStartOptions();
+			if (player.offlineProd) {
+				if (player.offTime === undefined){
+					player.offTime = { remain: 0 }
+				};
+				player.offTime.remain += (Date.now() - player.time) / 1000;
+			}
+			player.time = Date.now();
+			versionCheck();
+			changeTheme();
+			changeTreeQuality();
+			updateLayers();
+			setupModInfo();
+		
+			setupTemp();
+			updateTemp();
+			updateTemp();
+			updateTabFormats();
+			loadVue();
+			return
+		}
+		a = JSON.parse(a);
+		player = Object.assign(getStartPlayer(), a);
 		fixSave();
 		loadOptions();
 	}
-
-	if (options.offlineProd) {
-		if (player.offTime === undefined)
-			player.offTime = { remain: 0 };
+	if (player.offlineProd) {
+		if (player.offTime === undefined){
+			player.offTime = { remain: 0 }
+		};
 		player.offTime.remain += (Date.now() - player.time) / 1000;
 	}
 	player.time = Date.now();
@@ -212,54 +262,28 @@ function load() {
 	setupTemp();
 	updateTemp();
 	updateTemp();
-	updateTabFormats()
+	updateTabFormats();
 	loadVue();
 }
-
 function loadOptions() {
 	let get2 = localStorage.getItem(modInfo.id+"_options");
-	if (get2) 
+	if (get2) {
 		options = Object.assign(getStartOptions(), JSON.parse(decodeURIComponent(escape(atob(get2)))));
-	else 
+	}
+	else {
 		options = getStartOptions()
-	if (themes.indexOf(options.theme) < 0) theme = "default"
-	fixData(options, getStartOptions())
+	}
+
 
 }
-
 function setupModInfo() {
 	modInfo.changelog = changelog;
 	modInfo.winText = winText ? winText : `Congratulations! You have reached the end and beaten this game, but for now...`;
 
 }
-function fixNaNs() {
-	NaNcheck(player);
-}
-function NaNcheck(data) {
-	for (item in data) {
-		if (data[item] == null) {
-		}
-		else if (Array.isArray(data[item])) {
-			NaNcheck(data[item]);
-		}
-		else if (data[item] !== data[item] || checkDecimalNaN(data[item])) {
-			if (!NaNalert) {
-				clearInterval(interval);
-				NaNalert = true;
-				alert("Invalid value found in player, named '" + item + "'. Please let the creator of this mod know! You can refresh the page, and you will be un-NaNed.")
-				return
-			}
-		}
-		else if (data[item] instanceof Decimal) {
-		}
-		else if ((!!data[item]) && (data[item].constructor === Object)) {
-			NaNcheck(data[item]);
-		}
-	}
-}
 function exportSave() {
-	//if (NaNalert) return
-	let str = btoa(JSON.stringify(player));
+	let str = JSON.stringify(player);
+	str = "eydXRvc2F2ZSI6dHJ1ZSwibXNEaXNwbGF5IjoiYWx3YXlzIiwidGhlbWUiOm51bGwsImhxVHJlZSI6ZmFsc2UsIm9mZmxpbmVQcm9kIjp0cnVlLCJoaWRlQ2hhbGxlbmdlcyI6ZmFsc2UsInNob3dTdG9yeSI6dHJ1ZSwiZm9yY2VPbmVUYWIiOmZhbHNlLCJvbGRTdHlsZSI6ZmFsc2V9"+LZString.compressToBase64(str);
 
 	const el = document.createElement("textarea");
 	el.value = str;
@@ -270,17 +294,19 @@ function exportSave() {
 	document.body.removeChild(el);
 }
 function importSave(imported = undefined, forced = false) {
-	if (imported === undefined)
-		imported = prompt("Paste your save here");
+	if (imported === undefined){
+		imported = prompt("Paste your save here")
+	};
 	try {
-		tempPlr = Object.assign(getStartPlayer(), JSON.parse(atob(imported)));
-		if (tempPlr.versionType != modInfo.id && !forced && !confirm("This save appears to be for a different mod! Are you sure you want to import?")) // Wrong save (use "Forced" to force it to accept.)
-			return;
+		var a = LZString.decompressFromBase64(imported.substr(214));
+		if(a[0] != "{"){a = atob(imported)};
+		a = JSON.parse(a);
+		tempPlr = Object.assign(getStartPlayer(), a);
+		if (tempPlr.versionType != modInfo.id && !forced && !confirm("This save appears to be for a different mod! Are you sure you want to import?")){return};
 		player = tempPlr;
 		player.versionType = modInfo.id;
 		fixSave();
 		versionCheck();
-		NaNcheck(save)
 		save();
 		window.location.reload();
 	} catch (e) {
@@ -298,8 +324,9 @@ function versionCheck() {
 	if (setVersion) {
 		if (player.versionType == modInfo.id && VERSION.num > player.version) {
 			player.keepGoing = false;
-			if (fixOldSave)
-				fixOldSave(player.version);
+			if (fixOldSave){
+				fixOldSave(player.version)
+			};
 		}
 		player.versionType = getStartPlayer().versionType;
 		player.version = VERSION.num;
@@ -307,16 +334,5 @@ function versionCheck() {
 	}
 }
 var saveInterval = setInterval(function () {
-	if (player === undefined)
-		return;
-	if (tmp.gameEnded && !player.keepGoing)
-		return;
-	if (options.autosave)
-		save();
-}, 5000);
-
-window.onbeforeunload = () => {
-    if (player.autosave) {
-        save();
-    }
-};
+	if (options.autosave){save()};
+}, 500);

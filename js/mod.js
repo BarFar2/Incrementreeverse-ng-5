@@ -1,45 +1,26 @@
-let modInfo = {
-	name: "ArcTree",
-	id: "arctree",
-	author: "cyxw & sxy62146214",
-	pointsName: "Fragments",
-	modFiles: ["layers.js", "tree.js"],
-
+﻿let modInfo = {
+	name: "增量树宇宙ng-5",
+	id: "???",
+	author: "I",
+	pointsName: "点数",
 	discordName: "",
 	discordLink: "",
-	initialStartPoints: new Decimal (1), // Used for hard resets and new players
-	offlineLimit: 1,  // In hours
+	initialStartPoints: new ExpantaNum (0.001), // Used for hard resets and new players
+	
+	offlineLimit: 10,  // In hours
 }
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.0.4.0",
-	name: "Liner ≥ Softcaps",
+	num: "0.1",
+	name: "",
 }
 
-let changelog = `<h1>Changelog:</h1><br>
-	<h3>v0.0.4.0</h3><br>
-		- All row4 QoL added.<br>
-		- Call row5 done.<br>
-	<h3>v0.0.3.5</h3><br>
-		- All row5 layers added with basic stuff.<br>
-		- Not all row4 QoL added.<br>
-	<h3>v0.0.3.2</h3><br>
-		- Add first branch of stories, now it's time to check my writing skill(lol).<br>
-	<h3>v0.0.3.0</h3><br>
-		- Call row4 done.<br>
-	<h3>v0.0.2.5</h3><br>
-		- All row4 layers added with basic stuff.<br>
-		- All row3 QoL added.<br>
-	<h3>v0.0.2.0</h3><br>
-		- Call row3 completed.<br>
-	<h3>v0.0.1.1</h3><br>
-		- Call row2 completed.(Convinced)<br>
-	<h3>v0.0.1</h3><br>
-		- Call row2 completed.(Part of)<br>
-	<h3>v0.0</h3><br>
-		- Added things.<br>
-		- Added stuff.(Convinced)`
+let changelog = `<h1>更新日志:</h1><br>
+	<h3>v0.1</h3><br>
+		- 更新了i层，p层<br>
+		- 更新了4个成就和4个软上限
+		- 当前残局：85增量可重复购买项数量.`
 
 let winText = `Congratulations! You have reached the end and beaten this game, but for now...`
 
@@ -48,7 +29,7 @@ let winText = `Congratulations! You have reached the end and beaten this game, b
 var doNotCallTheseFunctionsEveryTick = ["blowUpEverything"]
 
 function getStartPoints(){
-    return new Decimal(modInfo.initialStartPoints)
+    return new ExpantaNum(modInfo.initialStartPoints)
 }
 
 // Determines if it should show points/sec
@@ -58,53 +39,19 @@ function canGenPoints(){
 
 // Calculate points/sec!
 function getPointGen() {
-	if(!canGenPoints())
-		return new Decimal(0)
-
-		
-	let gain = new Decimal(1)
-
-	//ADD
-	if (hasAchievement("a", 11)) gain=gain.add(0.5);
-
-
-	//MULT
-	if (hasUpgrade('mem', 11)) gain = gain.times(upgradeEffect('mem', 11))
-	if (hasUpgrade('mem', 14)) gain = gain.times(upgradeEffect('mem', 14))
-	if (hasUpgrade('mem', 22)) gain = gain.times(upgradeEffect('mem', 22))	
-	if (player.light.unlocked) gain = gain.times(tmp.light.effect);
-	if (player.lethe.unlocked) gain = gain.times(tmp.lethe.effect);
-	if (player.lethe.buyables[11].unlocked) gain = gain.times(buyableEffect('lethe',11));
-	if (hasMilestone('lab',0)) gain = gain.times(player.lab.power.div(10).max(1));
-	if (hasMilestone('lab',1)) gain = gain.times(player.lab.points.max(1));
-	if (hasUpgrade('storylayer',12)) gain = gain.times(upgradeEffect('storylayer',12));
-	if (hasAchievement('a',92)) gain = gain.times(achievementEffect('a',92));
-	if (hasMilestone('ins',3)) gain = gain.times(tmp['ins'].milestones[3].effect)
-	if (hasMilestone('ins',3)) gain = gain.times(layers.ins.insEffect().Sau().Pos())
-	if (hasMilestone('ins',4)) gain = gain.times(layers.ins.insEffect().Kaz())
-	if (hasMilestone('ins',4)) gain = gain.times(layers.ins.insEffect().Ind())
-	if (hasMilestone('ins',4)) gain = gain.times(layers.ins.insEffect().Chn().Pos());
-	if (hasMilestone('ins',5)) gain = gain.times(layers.ins.insEffect().Can())
-	if (hasMilestone('ins',5)) gain = gain.times(layers.ins.insEffect().Bra())
-	if (hasAchievement('a',113)) gain = gain.times(buyableEffect('lab',12).eff2());
+	if(!canGenPoints()) return new ExpantaNum(0)
+	let gain = new ExpantaNum(0.01)
+	gain = gain.div(player.sc.debuff1)
+	gain = gain.div(player.sc.debuff2)
+	gain = gain.mul(player.p.b12eff)
+	gain = gain.mul(player.p.points.add(10).log10().pow(player.p.b21eff))
+	if (hasUpgrade("i",11)) gain = gain.mul(upgradeEffect("i",11))
+	//gain = gain.mul(player.am.amEff)
+	if (gain.gte(0.01)) gain = psc(gain,new ExpantaNum(0.01),new ExpantaNum(0.33))
 	
-	//POW
-	if (hasUpgrade('dark', 12))gain = gain.times(tmp.dark.effect.pow(0.5));
-	if (hasUpgrade('mem', 33)&& !hasMilestone('kou',2)) gain = gain.pow(hasUpgrade('light', 23)?0.75:0.5);
-	if (hasChallenge("kou",21)) gain = gain.pow(1.025);
-	if (inChallenge("kou",11)) gain = gain.pow(0.75);
-	if (inChallenge("kou",21)) gain = gain.pow(1.05);
-	if (hasUpgrade('lab',73)) gain = gain.pow(buyableEffect('lab',12).eff1());
-	if (inChallenge('rei',11)) gain = gain.pow(0.5);
-	if (player.world.restrictChallenge&&!hasUpgrade('storylayer',14)) gain = gain.pow(0.9);
-	if (challengeCompletions('saya',21)) gain=gain.pow(challengeEffect('saya',21))
-
-	//tetrate
-	if (inChallenge('saya',21)) gain = gain.tetrate(layers.saya.challenges[21].debuff())
-
-	if (hasUpgrade('dark', 11)&&player.points.lt(upgradeEffect('dark',11))) gain = gain.times(2);
-	if (isNaN(gain.toNumber())) return new Decimal(1);
-        return gain
+	player.sc.pointsGain = gain
+	gain = gain.mul(player.p.b11eff)
+	return gain
 }
 
 // You can add non-layer related variables that should to into "player" and be saved here, along with default values
@@ -113,28 +60,49 @@ function addedPlayerData() { return {
 
 // Display extra things at the top of the page
 var displayThings = [
+	function(){
+        var db = `
+		你有${format(player.p.antiPoints,4)}反点数，距离它超过点数还有${format(player.points.div(player.p.antiPoints).log10().mul(116.2767475).div(player.p.b11eff).mul(player.p.b23eff))}秒<br>
+		${player.i.points.gte(0) ? `debuff1:基于距上次重置的时间削弱点数和增量获取 /${format(player.sc.debuff1)}<br>` : `debuff1:基于距上次重置的时间削弱点数获取 /${format(player.sc.debuff1)}<br>`}
+		debuff2:基于点数削弱点数获取 /${format(player.sc.debuff2)}<br>
+		`
+		if (player.i.points.gt(0)) db = db + `debuff3:基于增量削弱增量获取 /${format(player.sc.debuff3)}<br>
+		`
+		var b = `p层速度:${format(player.p.b11eff)}x<br>
+		`
+		var key = shiftDown ? "已按下Shift键" : "当前残局：85增量可重复购买项数量"
+		return db + b + key
+	}
 ]
 
 // Determines when the game "ends"
 function isEndgame() {
-	return player.points.gte(new Decimal("e280000000"))
+	return getBuyableAmount("i",11).add(getBuyableAmount("i",12)).add(getBuyableAmount("i",13)).gte(85)
 }
 
 
 
 // Less important things beyond this point!
 
-// Style for the background, can be a function
-var backgroundStyle = {
-
-}
-
 // You can change this if you have things that can be messed up by long tick lengths
 function maxTickLength() {
-	return(3600) // Default is 1 hour which is just arbitrarily large
+	return(1) // Default is 1 hour which is just arbitrarily large
 }
 
 // Use this if you need to undo inflation from an older version. If the version is older than the version that fixed the issue,
 // you can cap their current resources with this.
 function fixOldSave(oldVersion){
 }
+
+var controlDown = false
+var shiftDown = false
+
+window.addEventListener('keydown', function(event) {
+	if (event.keyCode == 16) shiftDown = true;
+	if (event.keyCode == 17) controlDown = true;
+}, false);
+
+window.addEventListener('keyup', function(event) {
+	if (event.keyCode == 16) shiftDown = false;
+	if (event.keyCode == 17) controlDown = false;
+}, false);

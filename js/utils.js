@@ -12,12 +12,9 @@ function respecBuyables(layer) {
 function canAffordUpgrade(layer, id) {
 	let upg = tmp[layer].upgrades[id]
 	if(tmp[layer].deactivated) return false
-	if (tmp[layer].upgrades[id].canAfford === false) return false
+	if (tmp[layer].upgrades[id].canAfford !== undefined) return tmp[layer].upgrades[id].canAfford
 	let cost = tmp[layer].upgrades[id].cost
-	if (cost !== undefined) 
-		return canAffordPurchase(layer, upg, cost)
-
-	return true
+	return canAffordPurchase(layer, upg, cost)
 }
 
 function canBuyBuyable(layer, id) {
@@ -28,6 +25,7 @@ function canBuyBuyable(layer, id) {
 
 
 function canAffordPurchase(layer, thing, cost) {
+
 	if (thing.currencyInternalName) {
 		let name = thing.currencyInternalName
 		if (thing.currencyLocation) {
@@ -53,7 +51,7 @@ function buyUpgrade(layer, id) {
 function buyUpg(layer, id) {
 	if (!tmp[layer].upgrades || !tmp[layer].upgrades[id]) return
 	let upg = tmp[layer].upgrades[id]
-	if (!player[layer].unlocked || player[layer].deactivated) return
+	if (!player[layer].unlocked) return
 	if (!tmp[layer].upgrades[id].unlocked) return
 	if (player[layer].upgrades.includes(id)) return
 	if (upg.canAfford === false) return
@@ -186,7 +184,7 @@ function goBack(layer) {
 
 function layOver(obj1, obj2) {
 	for (let x in obj2) {
-		if (obj2[x] instanceof Decimal) obj1[x] = new Decimal(obj2[x])
+		if (obj2[x] instanceof OmegaNum) obj1[x] = new OmegaNum(obj2[x])
 		else if (obj2[x] instanceof Object) layOver(obj1[x], obj2[x]);
 		else obj1[x] = obj2[x];
 	}
@@ -219,12 +217,12 @@ function notifyLayer(name) {
 }
 
 function subtabShouldNotify(layer, family, id) {
-    let subtab = {}
-    if (family == "mainTabs") subtab = tmp[layer].tabFormat[id]
-    else subtab = tmp[layer].microtabs[family][id]
-	if (!subtab.unlocked) return false
-    if (subtab.embedLayer) return tmp[subtab.embedLayer].notify
-    else return subtab.shouldNotify
+	let subtab = {}
+	if (family == "mainTabs") subtab = tmp[layer].tabFormat[id]
+	else subtab = tmp[layer].microtabs[family][id]
+
+	if (subtab.embedLayer) return tmp[subtab.embedLayer].notify
+	else return subtab.shouldNotify
 }
 
 function subtabResetNotify(layer, family, id) {
@@ -256,24 +254,22 @@ function toNumber(x) {
 }
 
 function updateMilestones(layer) {
-	if (tmp[layer].deactivated) return
 	for (id in layers[layer].milestones) {
 		if (!(hasMilestone(layer, id)) && layers[layer].milestones[id].done()) {
 			player[layer].milestones.push(id)
 			if (layers[layer].milestones[id].onComplete) layers[layer].milestones[id].onComplete()
-			if (tmp[layer].milestonePopups || tmp[layer].milestonePopups === undefined) doPopup("milestone", tmp[layer].milestones[id].requirementDescription, "Milestone Gotten!", 3, tmp[layer].color);
+			if (tmp[layer].milestonePopups || tmp[layer].milestonePopups === undefined) doPopup("milestone", tmp[layer].milestones[id].requirementDescription, "获得里程碑!", 3, tmp[layer].color);
 			player[layer].lastMilestone = id
 		}
 	}
 }
 
 function updateAchievements(layer) {
-	if (tmp[layer].deactivated) return
 	for (id in layers[layer].achievements) {
 		if (isPlainObject(layers[layer].achievements[id]) && !(hasAchievement(layer, id)) && layers[layer].achievements[id].done()) {
 			player[layer].achievements.push(id)
 			if (layers[layer].achievements[id].onComplete) layers[layer].achievements[id].onComplete()
-			if (tmp[layer].achievementPopups || tmp[layer].achievementPopups === undefined) doPopup("achievement", tmp[layer].achievements[id].name, "Achievement Gotten!", 3, tmp[layer].color);
+			if (tmp[layer].achievementPopups || tmp[layer].achievementPopups === undefined) doPopup("achievement", tmp[layer].achievements[id].name, "获得成就!", 3, tmp[layer].color);
 		}
 	}
 }
@@ -307,9 +303,9 @@ ctrlDown = false
 
 document.onkeydown = function (e) {
 	if (player === undefined) return;
+	if (gameEnded && !player.keepGoing) return;
 	shiftDown = e.shiftKey
 	ctrlDown = e.ctrlKey
-	if (tmp.gameEnded && !player.keepGoing) return;
 	let key = e.key
 	if (ctrlDown) key = "ctrl+" + key
 	if (onFocused) return
@@ -344,9 +340,9 @@ document.title = modInfo.name
 
 // Converts a string value to whatever it's supposed to be
 function toValue(value, oldValue) {
-	if (oldValue instanceof Decimal) {
-		value = new Decimal (value)
-		if (checkDecimalNaN(value)) return decimalZero
+	if (oldValue instanceof OmegaNum) {
+		value = new OmegaNum (value)
+		if (value.eq(OmegaNumNaN)) return OmegaNumZero
 		return value
 	}
 	if (!isNaN(oldValue)) 
